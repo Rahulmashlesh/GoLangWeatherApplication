@@ -36,12 +36,13 @@ func (p *Poller) StartPollingWeatherAPI() {
 	}
 }
 
-set log levels
-add debug logger ,
+// TODO: for next time
+//set log levels
+//add debug logger ,
 
 // testing file to test api logs with out making actual calls to api
 
-read about io readers and writers
-std lib doc, .
+//read about io readers and writers
+//std lib doc, .
 
-	// mock the client . / dependency injection.
+// mock the client . / dependency injection.

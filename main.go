@@ -23,5 +23,5 @@ func main() {
 
 	// sleep just to see the code in action,
 	// Should this be indefinite sleep?
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 }

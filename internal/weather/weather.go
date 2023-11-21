@@ -1,13 +1,12 @@
 package weather
 
 import (
+	"GoWeaterAPI/internal/client"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"net/http"
 )
 
-var apiKey = "key" //  # os.Getenv("OWM_API_KEY")
+var apiKey = "c4df6fe3e0d87fb4e9d14412929130a5" //   "os.Getenv("OWM_API_KEY")
 var unit = "F"
 var lang = "EN"
 var currentWeatherByZipUrl = "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
@@ -27,8 +26,9 @@ type CurrentWeather struct {
 	ID         int       `json:"id"`
 	Name       string    `json:"name"`
 	Cod        int       `json:"cod"`
-	Zipcode    string
+	Client     client.HttpGetter
 	Logger     *slog.Logger
+	Zipcode    string
 }
 type Coord struct {
 	Lon float64 `json:"lon"`
@@ -69,18 +69,15 @@ type Sys struct {
 	Sunset  int    `json:"sunset"`
 }
 
-func NewCurrentWeather(logger *slog.Logger, zipcode string) *CurrentWeather {
+func NewCurrentWeather(httpGetter client.HttpGetter, logger *slog.Logger, zipcode string) *CurrentWeather {
 	return &CurrentWeather{
-		Zipcode: zipcode,
-		Logger:  logger.With("context", "currentWeather", "zipcode", zipcode),
+		Client: httpGetter,
+		Logger: logger.With("context", "currentWeather", "zipcode", zipcode),
 	}
 }
 
 func (w *CurrentWeather) Call() {
-	url := fmt.Sprintf(currentWeatherByZipUrl, w.Zipcode, apiKey)
-
-	fmt.Sprintf(url)
-	rsp, err := http.Get(url)
+	rsp, err := w.Client.Get(w.Zipcode)
 	if err != nil {
 		w.Logger.Error("Error during HTTP GET req:", err)
 	}
