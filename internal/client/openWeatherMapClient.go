@@ -21,8 +21,8 @@ func NewOpenWeatherMapClient(apikey string) *OpenWeatherMapClient {
 
 func (c *OpenWeatherMapClient) Get(zipcode string) (rsp *http.Response, err error) {
 
-	var apiKey = "key"
 	currentWeatherByZipUrl := "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
-	url := fmt.Sprintf(currentWeatherByZipUrl, zipcode, apiKey)
+	url := fmt.Sprintf(currentWeatherByZipUrl, zipcode, c.apiKey)
+	fmt.Println("url:", url)
 	return http.Get(url)
 }

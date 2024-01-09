@@ -3,14 +3,17 @@ package weather
 import (
 	"GoWeaterAPI/internal/client"
 	"encoding/json"
+	"errors"
 	"log/slog"
+	"net/http"
 )
 
+/*
 var apiKey = "c4df6fe3e0d87fb4e9d14412929130a5" //   "os.Getenv("OWM_API_KEY")
 var unit = "F"
-var lang = "EN"
+var lang =
 var currentWeatherByZipUrl = "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
-
+*/
 type CurrentWeather struct {
 	Coord      Coord     `json:"coord"`
 	Weather    []Weather `json:"weather"`
@@ -71,21 +74,36 @@ type Sys struct {
 
 func NewCurrentWeather(httpGetter client.HttpGetter, logger *slog.Logger, zipcode string) *CurrentWeather {
 	return &CurrentWeather{
-		Client: httpGetter,
-		Logger: logger.With("context", "currentWeather", "zipcode", zipcode),
+		Zipcode: zipcode,
+		Client:  httpGetter,
+		Logger:  logger.With("context", "currentWeather", "zipcode", zipcode),
 	}
 }
 
 func (w *CurrentWeather) Call() {
+	w.GetWeather()
+}
+
+func (w *CurrentWeather) GetWeather() error {
 	rsp, err := w.Client.Get(w.Zipcode)
 	if err != nil {
 		w.Logger.Error("Error during HTTP GET req:", err)
-	}
-	err = json.NewDecoder(rsp.Body).Decode(w)
-	if err != nil {
-		w.Logger.Error("Error Decoding Json", err)
-
+		return errors.New("Http Client Error")
 	}
 
-	w.Logger.Info("Received Weather", "Weather", w)
+	w.Logger.Info("Response Code", "Rsp Status:", rsp.Status)
+
+	if rsp.StatusCode == http.StatusOK {
+		err = json.NewDecoder(rsp.Body).Decode(w)
+		if err != nil {
+			w.Logger.Error("Error Decoding Json", err)
+			return errors.New("json Decoding Error")
+		}
+		w.Logger.Info("Received Weather", "Weather", w)
+		return nil
+	} else {
+		// Handle non-OK status codes
+		w.Logger.Error("Non-OK HTTP status code", "StatusCode", rsp.StatusCode)
+		return errors.New("Http Client Error") // Change this line to return "Http Client Error"
+	}
 }

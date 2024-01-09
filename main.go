@@ -1,8 +1,13 @@
 package main
 
 import (
+	"GoWeaterAPI/config"
+	_ "GoWeaterAPI/config"
+	"GoWeaterAPI/internal/client"
 	"GoWeaterAPI/internal/poller"
 	"GoWeaterAPI/internal/weather"
+	"fmt"
+	_ "github.com/spf13/viper"
 	"log/slog"
 	"os"
 	"time"
@@ -14,9 +19,13 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	p := poller.NewPoller(1 * time.Second)
 
-	p.Add(weather.NewCurrentWeather(logger, "95134"))
-	p.Add(weather.NewCurrentWeather(logger, "78759"))
-	p.Add(weather.NewCurrentWeather(logger, "11213"))
+	fmt.Printf("apiKey: ", config.AppConfig.Apikey)
+
+	client := client.NewOpenWeatherMapClient(config.AppConfig.Apikey)
+
+	p.Add(weather.NewCurrentWeather(client, logger, "95134"))
+	p.Add(weather.NewCurrentWeather(client, logger, "78759"))
+	p.Add(weather.NewCurrentWeather(client, logger, "11213"))
 
 	// StartPollingWeatherAPI the poller
 	go p.StartPollingWeatherAPI()

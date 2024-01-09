@@ -2,6 +2,7 @@ package weather_test
 
 import (
 	"GoWeaterAPI/internal/weather"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,21 +15,53 @@ var currentWeatherByZipUrl = ""
 func TestCurrentWeather_Call(t *testing.T) {
 	zipcode := "95134"
 	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
-
-	client := httpMock{}
-	// Create an instance of CurrentWeather with the fake logger and a dummy zipcode
+	client := httpMock{statusCode: 200, responseMessage: sample_rsp}
 	weather := weather.NewCurrentWeather(&client, &loggerForTest, zipcode)
+	err := weather.GetWeather()
 
-	// Call the API (this will hit the fake server)
-	weather.Call()
+	assert.NoError(t, err)
+	assert.Equal(t, "Test Land", weather.Name)
+}
 
-	// TODO assert and check the log content.
+func TestInvalidAPIKey(t *testing.T) {
+	zipcode := "00000"
+	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
+	client := &httpMock{statusCode: 401, responseMessage: bad_apikey_rsp} // Indicate that the API key is invalid
+	weather := weather.NewCurrentWeather(client, &loggerForTest, zipcode)
+	err := weather.GetWeather()
 
-	//weather.Logger.
+	assert.Error(t, err)
 
 }
 
-var sample_rsp = `
+func TestHTTPClientError(t *testing.T) {
+	zipcode := "95134"
+	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
+
+	client := &httpMock{statusCode: http.StatusInternalServerError, responseMessage: ""}
+	weatherObj := weather.NewCurrentWeather(client, &loggerForTest, zipcode)
+
+	err := weatherObj.GetWeather()
+
+	assert.Error(t, err)
+	assert.Equal(t, "Http Client Error", err.Error())
+}
+
+type httpMock struct {
+	statusCode      int
+	responseMessage string
+}
+
+func (c *httpMock) Get(zipcode string) (rsp *http.Response, err error) {
+	b := strings.NewReader(c.responseMessage)
+	r := io.NopCloser(b)
+
+	a := &http.Response{Body: r, StatusCode: c.statusCode, Status: http.StatusText(c.statusCode)}
+	return a, nil
+}
+
+var bad_apikey_rsp = "Invalid API key"
+var sample_rsp string = `
 {
   "coord": {
     "lon": 10.99,
@@ -79,12 +112,3 @@ var sample_rsp = `
   "cod": 200
 }               
 `
-
-type httpMock struct {
-}
-
-func (c *httpMock) Get(zipcode string) (rsp *http.Response, err error) {
-
-	r := strings.NewReader(sample_rsp)
-	return &http.Response{Body: io.NopCloser(r), Status: http.StatusText(200)}, nil
-}
