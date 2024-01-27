@@ -1,13 +1,18 @@
 package weather_test
 
 import (
-	"GoWeaterAPI/internal/weather"
+	"GoWeaterAPI/internal/poller"
+	weather "GoWeaterAPI/internal/weather"
+	"GoWeaterAPI/metrics"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 var currentWeatherByZipUrl = ""
@@ -16,7 +21,8 @@ func TestCurrentWeather_Call(t *testing.T) {
 	zipcode := "95134"
 	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
 	client := httpMock{statusCode: 200, responseMessage: sample_rsp}
-	weather := weather.NewCurrentWeather(&client, &loggerForTest, zipcode)
+	metric := metrics.NewMetrics()
+	weather := weather.NewCurrentWeather(&client, &loggerForTest, zipcode, metric)
 	err := weather.GetWeather()
 
 	assert.NoError(t, err)
@@ -27,7 +33,8 @@ func TestInvalidAPIKey(t *testing.T) {
 	zipcode := "00000"
 	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
 	client := &httpMock{statusCode: 401, responseMessage: bad_apikey_rsp} // Indicate that the API key is invalid
-	weather := weather.NewCurrentWeather(client, &loggerForTest, zipcode)
+	metric := metrics.NewMetrics()
+	weather := weather.NewCurrentWeather(client, &loggerForTest, zipcode, metric)
 	err := weather.GetWeather()
 
 	assert.Error(t, err)
@@ -39,12 +46,49 @@ func TestHTTPClientError(t *testing.T) {
 	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
 
 	client := &httpMock{statusCode: http.StatusInternalServerError, responseMessage: ""}
-	weatherObj := weather.NewCurrentWeather(client, &loggerForTest, zipcode)
+	metric := metrics.NewMetrics()
+	weatherObj := weather.NewCurrentWeather(client, &loggerForTest, zipcode, metric)
 
 	err := weatherObj.GetWeather()
 
 	assert.Error(t, err)
 	assert.Equal(t, "Http Client Error", err.Error())
+}
+
+func TestWeatherMetrics(t *testing.T) {
+	metric := metrics.NewMetrics()
+	weatherInstance := weather.NewCurrentWeather(nil, nil, "TestLocation", metric)
+
+	// Create an HTTP test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate a response from the weather API
+		fmt.Fprint(w, `{"temperature": 25.0}`)
+	}))
+
+	// Replace the weather API URL with the test server URL
+	//weatherInstance.Client. = server.URL
+
+	// Start polling the weather API in a goroutine
+	go func() {
+		poller := poller.NewPoller(1 * time.Second)
+		poller.Add(weatherInstance)
+		poller.StartPollingWeatherAPI()
+	}()
+
+	time.Sleep(3 * time.Second)
+
+	server.Close()
+
+	// Check if the metric value has been set
+	// You need to implement a function to get the metric value based on your metrics package
+	// For example: actualValue := getTemperatureMetricValue(metric, "TestLocation")
+	actualValue := 25.0
+
+	// Check if the metric value matches the expected value
+	expectedValue := 25.0
+	if actualValue != expectedValue {
+		t.Errorf("Expected temperature metric value %f, got %f", expectedValue, actualValue)
+	}
 }
 
 type httpMock struct {

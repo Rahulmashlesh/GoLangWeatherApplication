@@ -8,10 +8,11 @@ import (
 var AppConfig Config
 
 type Config struct {
-	Lang   string
-	Unit   string
-	Url    string
-	Apikey string
+	Lang     string
+	Unit     string
+	Url      string
+	Apikey   string
+	Loglevel string
 }
 
 func init() {

@@ -2,18 +2,13 @@ package weather
 
 import (
 	"GoWeaterAPI/internal/client"
+	"GoWeaterAPI/metrics"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 )
 
-/*
-var apiKey = "c4df6fe3e0d87fb4e9d14412929130a5" //   "os.Getenv("OWM_API_KEY")
-var unit = "F"
-var lang =
-var currentWeatherByZipUrl = "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
-*/
 type CurrentWeather struct {
 	Coord      Coord     `json:"coord"`
 	Weather    []Weather `json:"weather"`
@@ -32,6 +27,7 @@ type CurrentWeather struct {
 	Client     client.HttpGetter
 	Logger     *slog.Logger
 	Zipcode    string
+	Metrics    metrics.Metrics
 }
 type Coord struct {
 	Lon float64 `json:"lon"`
@@ -72,8 +68,9 @@ type Sys struct {
 	Sunset  int    `json:"sunset"`
 }
 
-func NewCurrentWeather(httpGetter client.HttpGetter, logger *slog.Logger, zipcode string) *CurrentWeather {
+func NewCurrentWeather(httpGetter client.HttpGetter, logger *slog.Logger, zipcode string, metrics metrics.Metrics) *CurrentWeather {
 	return &CurrentWeather{
+		Metrics: metrics,
 		Zipcode: zipcode,
 		Client:  httpGetter,
 		Logger:  logger.With("context", "currentWeather", "zipcode", zipcode),
@@ -100,10 +97,18 @@ func (w *CurrentWeather) GetWeather() error {
 			return errors.New("json Decoding Error")
 		}
 		w.Logger.Info("Received Weather", "Weather", w)
+		w.Metrics.TempGage.WithLabelValues(w.Name, w.Zipcode).Set(w.Main.Temp)
+
 		return nil
 	} else {
 		// Handle non-OK status codes
 		w.Logger.Error("Non-OK HTTP status code", "StatusCode", rsp.StatusCode)
 		return errors.New("Http Client Error") // Change this line to return "Http Client Error"
 	}
+
+	// TODO:
+	//	TODO implement otehr types of metrices added temperature
+	//	http has a test server, check if weather metrices are being set correctly or not.
+	// poller can be a counter metric.
+	return nil
 }
