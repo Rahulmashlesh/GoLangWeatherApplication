@@ -1,4 +1,14 @@
-apiKey: "secret-key"
-unit: "F"
-lang: "EN"
+apiKey: "c4df6fe3e0d87fb4e9d14412929130a5"
 currentWeatherByZipUrl: "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
+
+# imperial, metric
+unit: "imperial"
+
+# EN FR RU
+lang: "EN"
+
+# Accepted log levels are: info, debug, error, warning
+loglevel: "DEBUG"
+
+# time in sec
+pollInterval: 20

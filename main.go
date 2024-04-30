@@ -1,55 +1,63 @@
 package main
 
 import (
-	"GoWeaterAPI/config"
-	_ "GoWeaterAPI/config"
-	"GoWeaterAPI/internal/client"
-	"GoWeaterAPI/internal/poller"
-	"GoWeaterAPI/internal/weather"
-	"GoWeaterAPI/metrics"
-	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	_ "GoWeatherAPI/app"
+	app2 "GoWeatherAPI/app"
+	_ "GoWeatherAPI/config"
 	_ "github.com/spf13/viper"
-	"log"
-	"log/slog"
-	"net/http"
-	"os"
-	"time"
+	"strings"
 )
 
-func main() {
-	//TODO:  Create a new poller with a poll period of 1 seconds
-
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	p := poller.NewPoller(1 * time.Second)
-
-	fmt.Printf("apiKey: ", config.AppConfig.Apikey)
-
-	client := client.NewOpenWeatherMapClient(config.AppConfig.Apikey)
-	metric := metrics.NewMetrics()
-
-	p.Add(weather.NewCurrentWeather(client, logger, "95134", metric))
-	p.Add(weather.NewCurrentWeather(client, logger, "78759", metric))
-	p.Add(weather.NewCurrentWeather(client, logger, "11213", metric))
-
-	// StartPollingWeatherAPI the poller
-	go p.StartPollingWeatherAPI()
-
-	// sleep just to see the code in action,
-	// Should this be indefinite sleep?
-	time.Sleep(5 * time.Second)
-
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(
-		collectors.NewGoCollector(),
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	)
-
-	//http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-	http.Handle("/metrics", promhttp.Handler())
-
-	log.Fatal(http.ListenAndServe(":8080", nil))
-
+// Node represents a node in the topology.
+type Node struct {
+	Name string
 }
+
+// Topology represents the overall structure of the nodes.
+type Topology struct {
+	Nodes []Node
+}
+
+// groupNodesBySuffix groups nodes within the Topology based on their suffix.
+func (t *Topology) groupNodesBySuffix() map[string][]Node {
+	groups := make(map[string][]Node)
+	for _, node := range t.Nodes {
+		parts := strings.Split(node.Name, "-")
+		if len(parts) > 1 {
+			suffix := parts[len(parts)-1]
+			groups[suffix] = append(groups[suffix], node)
+		}
+	}
+	return groups
+}
+func main() {
+
+	app := app2.App{}
+	app.Run()
+}
+
+/*client := client.NewOpenWeatherMapClient(config.AppConfig.Apikey)
+p := poller.NewPoller(config.AppConfig.PollInterval * time.Second)
+metric := metrics.NewMetrics()
+unit := config.AppConfig.Unit*/
+
+// use a new hook, on before serve.
+/*fmt.Println("Starting UI ...")
+http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	zipCodeHandler(w, r, p, client, logger, unit, metric)
+})
+
+addToPoller(client, logger, "78759", unit, metric, p)
+
+// use a new hook, on before bootstrap.
+go p.StartPollingWeatherAPI()*/
+
+// TODO need to move prometheus stuff to hooks.
+/*reg := prometheus.NewRegistry()
+reg.MustRegister(
+	collectors.NewGoCollector(),
+	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+)*/
+
+//http.Handle("/metrics", promhttp.Handler())
+//log.Fatal(http.ListenAndServe(":8081", nil))

@@ -1,9 +1,9 @@
 package weather_test
 
 import (
-	"GoWeaterAPI/internal/poller"
-	weather "GoWeaterAPI/internal/weather"
-	"GoWeaterAPI/metrics"
+	"GoWeatherAPI/internal/poller"
+	weather "GoWeatherAPI/internal/weather"
+	"GoWeatherAPI/metrics"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -22,7 +22,7 @@ func TestCurrentWeather_Call(t *testing.T) {
 	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
 	client := httpMock{statusCode: 200, responseMessage: sample_rsp}
 	metric := metrics.NewMetrics()
-	weather := weather.NewCurrentWeather(&client, &loggerForTest, zipcode, metric)
+	weather := weather.NewCurrentWeather(&client, &loggerForTest, zipcode, "imperial", metric)
 	err := weather.GetWeather()
 
 	assert.NoError(t, err)
@@ -34,7 +34,7 @@ func TestInvalidAPIKey(t *testing.T) {
 	loggerForTest := *slog.With("context", "currentWeather", "zipcode", zipcode)
 	client := &httpMock{statusCode: 401, responseMessage: bad_apikey_rsp} // Indicate that the API key is invalid
 	metric := metrics.NewMetrics()
-	weather := weather.NewCurrentWeather(client, &loggerForTest, zipcode, metric)
+	weather := weather.NewCurrentWeather(client, &loggerForTest, zipcode, "imperial", metric)
 	err := weather.GetWeather()
 
 	assert.Error(t, err)
@@ -47,7 +47,7 @@ func TestHTTPClientError(t *testing.T) {
 
 	client := &httpMock{statusCode: http.StatusInternalServerError, responseMessage: ""}
 	metric := metrics.NewMetrics()
-	weatherObj := weather.NewCurrentWeather(client, &loggerForTest, zipcode, metric)
+	weatherObj := weather.NewCurrentWeather(client, &loggerForTest, zipcode, "imperial", metric)
 
 	err := weatherObj.GetWeather()
 
@@ -57,7 +57,7 @@ func TestHTTPClientError(t *testing.T) {
 
 func TestWeatherMetrics(t *testing.T) {
 	metric := metrics.NewMetrics()
-	weatherInstance := weather.NewCurrentWeather(nil, nil, "TestLocation", metric)
+	weatherInstance := weather.NewCurrentWeather(nil, nil, "TestLocation", "imperial", metric)
 
 	// Create an HTTP test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +96,7 @@ type httpMock struct {
 	responseMessage string
 }
 
-func (c *httpMock) Get(zipcode string) (rsp *http.Response, err error) {
+func (c *httpMock) Get(zipcode string, unit string) (rsp *http.Response, err error) {
 	b := strings.NewReader(c.responseMessage)
 	r := io.NopCloser(b)
 

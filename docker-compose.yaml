@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  prometheus-server:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yaml:/prometheus/prometheus.yml
+    networks:
+      - my-network
+    command:
+      - "--log.level=debug"
+
+  weather-api:
+    image: goweather:v1
+    ports:
+      - "8090:8090"
+    networks:
+      - my-network
+    volumes:
+      - ./prometheus.yaml:/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - my-network
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus-server
+
+networks:
+  my-network:
+    driver: bridge

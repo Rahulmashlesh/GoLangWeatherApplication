@@ -14,4 +14,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Python 3.9 (GoWeaterAPI) interpreter library" level="application" />
   </component>
+  <component name="SonarLintModuleSettings">
+    <option name="uniqueId" value="63d4d944-500d-439d-8d7a-83aba3fb31e2" />
+  </component>
 </module>

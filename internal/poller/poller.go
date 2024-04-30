@@ -1,6 +1,7 @@
 package poller
 
 import (
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"time"
@@ -43,6 +44,7 @@ func (p *Poller) StartPollingWeatherAPI() {
 
 			//Increment the counter
 			p.tickerCount.Inc()
+			fmt.Println("tick...")
 		}
 	}
 }

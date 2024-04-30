@@ -1,8 +1,9 @@
 package weather
 
 import (
-	"GoWeaterAPI/internal/client"
-	"GoWeaterAPI/metrics"
+	"GoWeatherAPI/internal/client"
+	"GoWeatherAPI/metrics"
+	"GoWeatherAPI/model"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -24,10 +25,13 @@ type CurrentWeather struct {
 	ID         int       `json:"id"`
 	Name       string    `json:"name"`
 	Cod        int       `json:"cod"`
+	Unit       string
+	Lang       string
 	Client     client.HttpGetter
 	Logger     *slog.Logger
 	Zipcode    string
 	Metrics    metrics.Metrics
+	Dao        *model.Locations
 }
 type Coord struct {
 	Lon float64 `json:"lon"`
@@ -68,12 +72,14 @@ type Sys struct {
 	Sunset  int    `json:"sunset"`
 }
 
-func NewCurrentWeather(httpGetter client.HttpGetter, logger *slog.Logger, zipcode string, metrics metrics.Metrics) *CurrentWeather {
+func NewCurrentWeather(httpGetter client.HttpGetter, logger *slog.Logger, zipcode string, unit string, metrics metrics.Metrics, dao *model.Locations) *CurrentWeather {
 	return &CurrentWeather{
 		Metrics: metrics,
 		Zipcode: zipcode,
 		Client:  httpGetter,
+		Unit:    unit,
 		Logger:  logger.With("context", "currentWeather", "zipcode", zipcode),
+		Dao:     dao,
 	}
 }
 
@@ -82,13 +88,14 @@ func (w *CurrentWeather) Call() {
 }
 
 func (w *CurrentWeather) GetWeather() error {
-	rsp, err := w.Client.Get(w.Zipcode)
+	rsp, err := w.Client.Get(w.Zipcode, w.Unit)
+
 	if err != nil {
 		w.Logger.Error("Error during HTTP GET req:", err)
 		return errors.New("Http Client Error")
 	}
-
-	w.Logger.Info("Response Code", "Rsp Status:", rsp.Status)
+	w.Logger.Info("Processing", " Zipcode:", w.Zipcode)
+	w.Logger.Debug("Response Code", "Rsp Status:", rsp.Status)
 
 	if rsp.StatusCode == http.StatusOK {
 		err = json.NewDecoder(rsp.Body).Decode(w)
@@ -96,8 +103,13 @@ func (w *CurrentWeather) GetWeather() error {
 			w.Logger.Error("Error Decoding Json", err)
 			return errors.New("json Decoding Error")
 		}
-		w.Logger.Info("Received Weather", "Weather", w)
+		w.Logger.Debug("Received Weather", "Weather", w)
 		w.Metrics.TempGage.WithLabelValues(w.Name, w.Zipcode).Set(w.Main.Temp)
+
+		err := w.Dao.Update(&model.Location{Zipcode: w.Zipcode, Name: w.Name, Temperature: w.Main.Temp})
+		if err != nil {
+			return err
+		}
 
 		return nil
 	} else {
@@ -105,10 +117,5 @@ func (w *CurrentWeather) GetWeather() error {
 		w.Logger.Error("Non-OK HTTP status code", "StatusCode", rsp.StatusCode)
 		return errors.New("Http Client Error") // Change this line to return "Http Client Error"
 	}
-
-	// TODO:
-	//	TODO implement otehr types of metrices added temperature
-	//	http has a test server, check if weather metrices are being set correctly or not.
-	// poller can be a counter metric.
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type HttpGetter interface {
-	Get(zipcode string) (*http.Response, error)
+	Get(zipcode string, unit string) (*http.Response, error)
 }
 
 type OpenWeatherMapClient struct {
@@ -19,10 +19,8 @@ func NewOpenWeatherMapClient(apikey string) *OpenWeatherMapClient {
 	}
 }
 
-func (c *OpenWeatherMapClient) Get(zipcode string) (rsp *http.Response, err error) {
-
-	currentWeatherByZipUrl := "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
-	url := fmt.Sprintf(currentWeatherByZipUrl, zipcode, c.apiKey)
-	fmt.Println("url:", url)
+func (c *OpenWeatherMapClient) Get(zipcode string, unit string) (rsp *http.Response, err error) {
+	currentWeatherByZipUrl := "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s&units=%s"
+	url := fmt.Sprintf(currentWeatherByZipUrl, zipcode, c.apiKey, unit)
 	return http.Get(url)
 }
