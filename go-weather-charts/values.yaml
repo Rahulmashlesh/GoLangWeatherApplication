@@ -1,39 +1,39 @@
 # Redis values
 redis:
+  global:
+    redis:
+      password: "redis-p0"
   architecture: standalone
-  auth:
-    enabled: true
-    password: "redis-password"  # TODO: change to Kubernetes Secrets
 
 # Prometheus values
-prometheus:
-  server:
-    image:
-      repository: prom/prometheus
-      tag: "latest"
-    service:
-      type: ClusterIP
-      port: 9090
-    persistence:
-      enabled: true
-      size: "8Gi"
-    extraArgs:
-      log.level: "debug"
-    extraConfigmapMounts:
-      - name: prometheus-config
-        mountPath: /prometheus/prometheus.yml
-        subPath: prometheus.yml
-        configMap: prometheus-server-conf
+#prometheus:
+#  server:
+#    image:
+#      repository: prom/prometheus
+#      tag: "latest"
+#    service:
+#      type: ClusterIP
+#      port: 9090
+#    persistence:
+#      enabled: true
+#      size: "8Gi"
+#    extraArgs:
+#      log.level: "debug"
+#    extraConfigmapMounts:
+#      - name: prometheus-config
+#        mountPath: /prometheus/prometheus.yml
+#        subPath: prometheus.yml
+#        configMap: prometheus-server-conf
 
 # Grafana values
-grafana:
-  adminUser: "admin"
-  adminPassword: "admin"  # TODO: change to Kubernetes Secrets
-  persistence:
-    enabled: true
-    size: "10Gi"
-  env:
-    GF_USERS_ALLOW_SIGN_UP: "false"
+#grafana:
+#  adminUser: "admin"
+#  adminPassword: "admin"  # TODO: change to Kubernetes Secrets
+#  persistence:
+#    enabled: true
+#    size: "10Gi"
+#  env:
+#    GF_USERS_ALLOW_SIGN_UP: "false"
 
 # Weather API service values
 weather-api:

@@ -33,6 +33,8 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     depends_on:
       - prometheus-server
+  redis:
+    image: bitnami/redis
 
 networks:
   my-network:

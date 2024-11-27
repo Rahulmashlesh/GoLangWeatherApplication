@@ -1,4 +1,5 @@
-//package weather_test
+package weather_test
+
 //
 //import (
 //	"GoWeatherAPI/internal/poller"

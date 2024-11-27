@@ -1,0 +1,2348 @@
+---
+# Source: go-weather-stack/charts/redis/templates/networkpolicy.yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: weather-redis
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: weather
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - {}
+  ingress:
+    # Allow inbound connections
+    - ports:
+        - port: 6379
+---
+# Source: go-weather-stack/charts/grafana/templates/podsecuritypolicy.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: weather-grafana
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default,runtime/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
+    apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/defaultProfileName:  'runtime/default'
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    # Default set from Docker, with DAC_OVERRIDE and CHOWN
+      - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'csi'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'RunAsAny'
+  seLinux:
+    rule: 'RunAsAny'
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+      # Forbid adding the root group.
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      # Forbid adding the root group.
+      - min: 1
+        max: 65535
+  readOnlyRootFilesystem: false
+---
+# Source: go-weather-stack/charts/grafana/templates/tests/test-podsecuritypolicy.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: weather-grafana-test
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  allowPrivilegeEscalation: true
+  privileged: false
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  fsGroup:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - projected
+  - csi
+  - secret
+---
+# Source: go-weather-stack/charts/grafana/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+  name: weather-grafana
+  namespace: sandbox
+---
+# Source: go-weather-stack/charts/grafana/templates/tests/test-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+  name: weather-grafana-test
+  namespace: sandbox
+---
+# Source: go-weather-stack/charts/prometheus/charts/kube-state-metrics/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:    
+    helm.sh/chart: kube-state-metrics-4.4.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: kube-state-metrics
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "2.3.0"
+  name: weather-kube-state-metrics
+  namespace: sandbox
+imagePullSecrets:
+  []
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+  namespace: sandbox
+  annotations:
+    {}
+---
+# Source: go-weather-stack/charts/prometheus/templates/node-exporter/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    component: "node-exporter"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-node-exporter
+  namespace: sandbox
+  annotations:
+    {}
+---
+# Source: go-weather-stack/charts/prometheus/templates/pushgateway/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    component: "pushgateway"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-pushgateway
+  namespace: sandbox
+  annotations:
+    {}
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+  namespace: sandbox
+  annotations:
+    {}
+---
+# Source: go-weather-stack/charts/redis/templates/master/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+automountServiceAccountToken: false
+metadata:
+  name: weather-redis-master
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+---
+# Source: go-weather-stack/charts/grafana/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+data:
+  admin-user: "YWRtaW4="
+  admin-password: "YWRtaW4="
+  ldap-toml: ""
+---
+# Source: go-weather-stack/charts/redis/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: weather-redis
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+type: Opaque
+data:
+  redis-password: "cmVkaXMtcGFzc3dvcmQ="
+---
+# Source: go-weather-stack/charts/grafana/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+data:
+  grafana.ini: |
+    [analytics]
+    check_for_updates = true
+    [grafana_net]
+    url = https://grafana.net
+    [log]
+    mode = console
+    [paths]
+    data = /var/lib/grafana/
+    logs = /var/log/grafana
+    plugins = /var/lib/grafana/plugins
+    provisioning = /etc/grafana/provisioning
+---
+# Source: go-weather-stack/charts/grafana/templates/tests/test-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weather-grafana-test
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+data:
+  run.sh: |-
+    @test "Test Health" {
+      url="http://weather-grafana/api/health"
+
+      code=$(wget --server-response --spider --timeout 10 --tries 1 ${url} 2>&1 | awk '/^  HTTP/{print $2}')
+      [ "$code" == "200" ]
+    }
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+  namespace: sandbox
+data:
+  alertmanager.yml: |
+    global: {}
+    receivers:
+    - name: default-receiver
+    route:
+      group_interval: 5m
+      group_wait: 10s
+      receiver: default-receiver
+      repeat_interval: 3h
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+  namespace: sandbox
+data:
+  alerting_rules.yml: |
+    {}
+  alerts: |
+    {}
+  prometheus.yml: |
+    global:
+      evaluation_interval: 1m
+      scrape_interval: 1m
+      scrape_timeout: 10s
+    rule_files:
+    - /etc/config/recording_rules.yml
+    - /etc/config/alerting_rules.yml
+    - /etc/config/rules
+    - /etc/config/alerts
+    scrape_configs:
+    - job_name: prometheus
+      static_configs:
+      - targets:
+        - localhost:9090
+    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      job_name: kubernetes-apiservers
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: default;kubernetes;https
+        source_labels:
+        - __meta_kubernetes_namespace
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      job_name: kubernetes-nodes
+      kubernetes_sd_configs:
+      - role: node
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - replacement: kubernetes.default.svc:443
+        target_label: __address__
+      - regex: (.+)
+        replacement: /api/v1/nodes/$1/proxy/metrics
+        source_labels:
+        - __meta_kubernetes_node_name
+        target_label: __metrics_path__
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      job_name: kubernetes-nodes-cadvisor
+      kubernetes_sd_configs:
+      - role: node
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - replacement: kubernetes.default.svc:443
+        target_label: __address__
+      - regex: (.+)
+        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+        source_labels:
+        - __meta_kubernetes_node_name
+        target_label: __metrics_path__
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
+    - job_name: kubernetes-service-endpoints
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape
+      - action: drop
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_service_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: node
+    - job_name: kubernetes-service-endpoints-slow
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_service_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: node
+      scrape_interval: 5m
+      scrape_timeout: 30s
+    - honor_labels: true
+      job_name: prometheus-pushgateway
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      - action: keep
+        regex: pushgateway
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_probe
+    - job_name: kubernetes-services
+      kubernetes_sd_configs:
+      - role: service
+      metrics_path: /probe
+      params:
+        module:
+        - http_2xx
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_probe
+      - source_labels:
+        - __address__
+        target_label: __param_target
+      - replacement: blackbox
+        target_label: __address__
+      - source_labels:
+        - __param_target
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+    - job_name: kubernetes-pods
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scrape
+      - action: drop
+        regex: true
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_pod_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_name
+        target_label: pod
+      - action: drop
+        regex: Pending|Succeeded|Failed|Completed
+        source_labels:
+        - __meta_kubernetes_pod_phase
+    - job_name: kubernetes-pods-slow
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_pod_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_pod_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_name
+        target_label: pod
+      - action: drop
+        regex: Pending|Succeeded|Failed|Completed
+        source_labels:
+        - __meta_kubernetes_pod_phase
+      scrape_interval: 5m
+      scrape_timeout: 30s
+    alerting:
+      alertmanagers:
+      - kubernetes_sd_configs:
+          - role: pod
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace]
+          regex: sandbox
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          regex: prometheus
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_label_component]
+          regex: alertmanager
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_probe]
+          regex: .*
+          action: keep
+        - source_labels: [__meta_kubernetes_pod_container_port_number]
+          regex: "9093"
+          action: keep
+  recording_rules.yml: |
+    {}
+  rules: |
+    {}
+---
+# Source: go-weather-stack/charts/redis/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weather-redis-configuration
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+data:
+  redis.conf: |-
+    # User-supplied common configuration:
+    # Enable AOF https://redis.io/topics/persistence#append-only-file
+    appendonly yes
+    # Disable RDB persistence, AOF persistence already enabled.
+    save ""
+    # End of common configuration
+  master.conf: |-
+    dir /data
+    # User-supplied master configuration:
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    # End of master configuration
+  replica.conf: |-
+    dir /data
+    # User-supplied replica configuration:
+    rename-command FLUSHDB ""
+    rename-command FLUSHALL ""
+    # End of replica configuration
+---
+# Source: go-weather-stack/charts/redis/templates/health-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weather-redis-health
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+data:
+  ping_readiness_local.sh: |-
+    #!/bin/bash
+
+    [[ -f $REDIS_PASSWORD_FILE ]] && export REDIS_PASSWORD="$(< "${REDIS_PASSWORD_FILE}")"
+    [[ -n "$REDIS_PASSWORD" ]] && export REDISCLI_AUTH="$REDIS_PASSWORD"
+    response=$(
+      timeout -s 15 $1 \
+      redis-cli \
+        -h localhost \
+        -p $REDIS_PORT \
+        ping
+    )
+    if [ "$?" -eq "124" ]; then
+      echo "Timed out"
+      exit 1
+    fi
+    if [ "$response" != "PONG" ]; then
+      echo "$response"
+      exit 1
+    fi
+  ping_liveness_local.sh: |-
+    #!/bin/bash
+
+    [[ -f $REDIS_PASSWORD_FILE ]] && export REDIS_PASSWORD="$(< "${REDIS_PASSWORD_FILE}")"
+    [[ -n "$REDIS_PASSWORD" ]] && export REDISCLI_AUTH="$REDIS_PASSWORD"
+    response=$(
+      timeout -s 15 $1 \
+      redis-cli \
+        -h localhost \
+        -p $REDIS_PORT \
+        ping
+    )
+    if [ "$?" -eq "124" ]; then
+      echo "Timed out"
+      exit 1
+    fi
+    responseFirstWord=$(echo $response | head -n1 | awk '{print $1;}')
+    if [ "$response" != "PONG" ] && [ "$responseFirstWord" != "LOADING" ] && [ "$responseFirstWord" != "MASTERDOWN" ]; then
+      echo "$response"
+      exit 1
+    fi
+  ping_readiness_master.sh: |-
+    #!/bin/bash
+
+    [[ -f $REDIS_MASTER_PASSWORD_FILE ]] && export REDIS_MASTER_PASSWORD="$(< "${REDIS_MASTER_PASSWORD_FILE}")"
+    [[ -n "$REDIS_MASTER_PASSWORD" ]] && export REDISCLI_AUTH="$REDIS_MASTER_PASSWORD"
+    response=$(
+      timeout -s 15 $1 \
+      redis-cli \
+        -h $REDIS_MASTER_HOST \
+        -p $REDIS_MASTER_PORT_NUMBER \
+        ping
+    )
+    if [ "$?" -eq "124" ]; then
+      echo "Timed out"
+      exit 1
+    fi
+    if [ "$response" != "PONG" ]; then
+      echo "$response"
+      exit 1
+    fi
+  ping_liveness_master.sh: |-
+    #!/bin/bash
+
+    [[ -f $REDIS_MASTER_PASSWORD_FILE ]] && export REDIS_MASTER_PASSWORD="$(< "${REDIS_MASTER_PASSWORD_FILE}")"
+    [[ -n "$REDIS_MASTER_PASSWORD" ]] && export REDISCLI_AUTH="$REDIS_MASTER_PASSWORD"
+    response=$(
+      timeout -s 15 $1 \
+      redis-cli \
+        -h $REDIS_MASTER_HOST \
+        -p $REDIS_MASTER_PORT_NUMBER \
+        ping
+    )
+    if [ "$?" -eq "124" ]; then
+      echo "Timed out"
+      exit 1
+    fi
+    responseFirstWord=$(echo $response | head -n1 | awk '{print $1;}')
+    if [ "$response" != "PONG" ] && [ "$responseFirstWord" != "LOADING" ]; then
+      echo "$response"
+      exit 1
+    fi
+  ping_readiness_local_and_master.sh: |-
+    script_dir="$(dirname "$0")"
+    exit_status=0
+    "$script_dir/ping_readiness_local.sh" $1 || exit_status=$?
+    "$script_dir/ping_readiness_master.sh" $1 || exit_status=$?
+    exit $exit_status
+  ping_liveness_local_and_master.sh: |-
+    script_dir="$(dirname "$0")"
+    exit_status=0
+    "$script_dir/ping_liveness_local.sh" $1 || exit_status=$?
+    "$script_dir/ping_liveness_master.sh" $1 || exit_status=$?
+    exit $exit_status
+---
+# Source: go-weather-stack/charts/redis/templates/scripts-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weather-redis-scripts
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+data:
+  start-master.sh: |
+    #!/bin/bash
+
+    [[ -f $REDIS_PASSWORD_FILE ]] && export REDIS_PASSWORD="$(< "${REDIS_PASSWORD_FILE}")"
+    if [[ -f /opt/bitnami/redis/mounted-etc/master.conf ]];then
+        cp /opt/bitnami/redis/mounted-etc/master.conf /opt/bitnami/redis/etc/master.conf
+    fi
+    if [[ -f /opt/bitnami/redis/mounted-etc/redis.conf ]];then
+        cp /opt/bitnami/redis/mounted-etc/redis.conf /opt/bitnami/redis/etc/redis.conf
+    fi
+    ARGS=("--port" "${REDIS_PORT}")
+    ARGS+=("--requirepass" "${REDIS_PASSWORD}")
+    ARGS+=("--masterauth" "${REDIS_PASSWORD}")
+    ARGS+=("--include" "/opt/bitnami/redis/etc/redis.conf")
+    ARGS+=("--include" "/opt/bitnami/redis/etc/master.conf")
+    exec redis-server "${ARGS[@]}"
+---
+# Source: go-weather-stack/templates/prometheus/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+data:
+  prometheus.yml: |-
+    # Include Prometheus configuration here
+---
+# Source: go-weather-stack/charts/grafana/templates/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+  finalizers:
+    - kubernetes.io/pvc-protection
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "10Gi"
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+  namespace: sandbox
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "2Gi"
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+  namespace: sandbox
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "8Gi"
+---
+# Source: go-weather-stack/charts/grafana/templates/clusterrole.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+  name: weather-grafana-clusterrole
+rules: []
+---
+# Source: go-weather-stack/charts/prometheus/charts/kube-state-metrics/templates/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:    
+    helm.sh/chart: kube-state-metrics-4.4.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: kube-state-metrics
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "2.3.0"
+  name: weather-kube-state-metrics
+rules:
+
+- apiGroups: ["certificates.k8s.io"]
+  resources:
+  - certificatesigningrequests
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["list", "watch"]
+
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - daemonsets
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - deployments
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs: ["list", "watch"]
+
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources:
+  - ingresses
+  verbs: ["list", "watch"]
+
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - limitranges
+  verbs: ["list", "watch"]
+
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - mutatingwebhookconfigurations
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs: ["list", "watch"]
+
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - persistentvolumeclaims
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - persistentvolumes
+  verbs: ["list", "watch"]
+
+- apiGroups: ["policy"]
+  resources:
+    - poddisruptionbudgets
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "watch"]
+
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - replicasets
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - replicationcontrollers
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - resourcequotas
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["list", "watch"]
+
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["list", "watch"]
+
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs: ["list", "watch"]
+
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - storageclasses
+  verbs: ["list", "watch"]
+
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - validatingwebhookconfigurations
+  verbs: ["list", "watch"]
+
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - volumeattachments
+  verbs: ["list", "watch"]
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+rules:
+  []
+---
+# Source: go-weather-stack/charts/prometheus/templates/pushgateway/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    component: "pushgateway"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-pushgateway
+rules:
+  []
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - nodes/proxy
+      - nodes/metrics
+      - services
+      - endpoints
+      - pods
+      - ingresses
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "extensions"
+      - "networking.k8s.io"
+    resources:
+      - ingresses/status
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - nonResourceURLs:
+      - "/metrics"
+    verbs:
+      - get
+---
+# Source: go-weather-stack/charts/grafana/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: weather-grafana-clusterrolebinding
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+subjects:
+  - kind: ServiceAccount
+    name: weather-grafana
+    namespace: sandbox
+roleRef:
+  kind: ClusterRole
+  name: weather-grafana-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: go-weather-stack/charts/prometheus/charts/kube-state-metrics/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:    
+    helm.sh/chart: kube-state-metrics-4.4.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: kube-state-metrics
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "2.3.0"
+  name: weather-kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: weather-kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: weather-kube-state-metrics
+  namespace: sandbox
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+subjects:
+  - kind: ServiceAccount
+    name: weather-prometheus-alertmanager
+    namespace: sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: weather-prometheus-alertmanager
+---
+# Source: go-weather-stack/charts/prometheus/templates/pushgateway/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    component: "pushgateway"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-pushgateway
+subjects:
+  - kind: ServiceAccount
+    name: weather-prometheus-pushgateway
+    namespace: sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: weather-prometheus-pushgateway
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+subjects:
+  - kind: ServiceAccount
+    name: weather-prometheus-server
+    namespace: sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: weather-prometheus-server
+---
+# Source: go-weather-stack/charts/grafana/templates/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:      ['extensions']
+  resources:      ['podsecuritypolicies']
+  verbs:          ['use']
+  resourceNames:  [weather-grafana]
+---
+# Source: go-weather-stack/charts/grafana/templates/tests/test-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: weather-grafana-test
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:      ['policy']
+  resources:      ['podsecuritypolicies']
+  verbs:          ['use']
+  resourceNames:  [weather-grafana-test]
+---
+# Source: go-weather-stack/charts/grafana/templates/rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: weather-grafana
+subjects:
+- kind: ServiceAccount
+  name: weather-grafana
+  namespace: sandbox
+---
+# Source: go-weather-stack/charts/grafana/templates/tests/test-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: weather-grafana-test
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: weather-grafana-test
+subjects:
+- kind: ServiceAccount
+  name: weather-grafana-test
+  namespace: sandbox
+---
+# Source: go-weather-stack/charts/grafana/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: service
+      port: 80
+      protocol: TCP
+      targetPort: 3000
+
+  selector:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+---
+# Source: go-weather-stack/charts/prometheus/charts/kube-state-metrics/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-kube-state-metrics
+  namespace: sandbox
+  labels:    
+    helm.sh/chart: kube-state-metrics-4.4.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: kube-state-metrics
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "2.3.0"
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  type: "ClusterIP"
+  ports:
+  - name: "http"
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  
+  selector:    
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/instance: weather
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+  namespace: sandbox
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 9093
+  selector:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+  sessionAffinity: None
+  type: "ClusterIP"
+---
+# Source: go-weather-stack/charts/prometheus/templates/node-exporter/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    component: "node-exporter"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-node-exporter
+  namespace: sandbox
+spec:
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: 9100
+      protocol: TCP
+      targetPort: 9100
+  selector:
+    component: "node-exporter"
+    app: prometheus
+    release: weather
+  type: "ClusterIP"
+---
+# Source: go-weather-stack/charts/prometheus/templates/pushgateway/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/probe: pushgateway
+  labels:
+    component: "pushgateway"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-pushgateway
+  namespace: sandbox
+spec:
+  ports:
+    - name: http
+      port: 9091
+      protocol: TCP
+      targetPort: 9091
+  selector:
+    component: "pushgateway"
+    app: prometheus
+    release: weather
+  type: "ClusterIP"
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+  namespace: sandbox
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 9090
+  selector:
+    component: "server"
+    app: prometheus
+    release: weather
+  sessionAffinity: None
+  type: "ClusterIP"
+---
+# Source: go-weather-stack/charts/redis/templates/headless-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-redis-headless
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: redis
+  selector:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/name: redis
+---
+# Source: go-weather-stack/charts/redis/templates/master/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-redis-master
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+    app.kubernetes.io/component: master
+spec:
+  type: ClusterIP
+  internalTrafficPolicy: Cluster
+  sessionAffinity: None
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: redis
+      nodePort: null
+  selector:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: master
+---
+# Source: go-weather-stack/templates/grafana/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: grafana
+---
+# Source: go-weather-stack/templates/prometheus/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+  selector:
+    app: prometheus-server
+---
+# Source: go-weather-stack/templates/weather-api/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: weather-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8090
+    targetPort: 8090
+  selector:
+    app: weather-api
+---
+# Source: go-weather-stack/charts/prometheus/templates/node-exporter/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    component: "node-exporter"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-node-exporter
+  namespace: sandbox
+spec:
+  selector:
+    matchLabels:
+      component: "node-exporter"
+      app: prometheus
+      release: weather
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        component: "node-exporter"
+        app: prometheus
+        release: weather
+        chart: prometheus-15.5.3
+        heritage: Helm
+    spec:
+      serviceAccountName: weather-prometheus-node-exporter
+      containers:
+        - name: prometheus-node-exporter
+          image: "quay.io/prometheus/node-exporter:v1.3.0"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+            - --path.rootfs=/host/root
+            - --web.listen-address=:9100
+          ports:
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+          resources:
+            {}
+          volumeMounts:
+            - name: proc
+              mountPath: /host/proc
+              readOnly:  true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: root
+              mountPath: /host/root
+              mountPropagation: HostToContainer
+              readOnly: true
+      hostNetwork: true
+      hostPID: true
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: root
+          hostPath:
+            path: /
+---
+# Source: go-weather-stack/charts/grafana/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-grafana
+  namespace: sandbox
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/instance: weather
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grafana
+        app.kubernetes.io/instance: weather
+      annotations:
+        checksum/config: 635958ce6298164e3c08dbcea8d65de7bdfd35af9e93e3e52a215f023c1628da
+        checksum/dashboards-json-config: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+        checksum/sc-dashboard-provider-config: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+        checksum/secret: 855e9b5886c7a87313beb9bcf59ceb411f2d20b01d95a80b2794a232a915ca7b
+    spec:
+      
+      serviceAccountName: weather-grafana
+      automountServiceAccountToken: true
+      securityContext:
+        fsGroup: 472
+        runAsGroup: 472
+        runAsUser: 472
+      initContainers:
+        - name: init-chown-data
+          image: "busybox:1.31.1"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          command: ["chown", "-R", "472:472", "/var/lib/grafana"]
+          resources:
+            {}
+          volumeMounts:
+            - name: storage
+              mountPath: "/var/lib/grafana"
+      enableServiceLinks: true
+      containers:
+        - name: grafana
+          image: "grafana/grafana:8.4.2"
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: config
+              mountPath: "/etc/grafana/grafana.ini"
+              subPath: grafana.ini
+            - name: storage
+              mountPath: "/var/lib/grafana"
+          ports:
+            - name: service
+              containerPort: 80
+              protocol: TCP
+            - name: grafana
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: weather-grafana
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: weather-grafana
+                  key: admin-password
+            - name: GF_PATHS_DATA
+              value: /var/lib/grafana/
+            - name: GF_PATHS_LOGS
+              value: /var/log/grafana
+            - name: GF_PATHS_PLUGINS
+              value: /var/lib/grafana/plugins
+            - name: GF_PATHS_PROVISIONING
+              value: /etc/grafana/provisioning
+            - name: "GF_USERS_ALLOW_SIGN_UP"
+              value: "false"
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            timeoutSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+          resources:
+            {}
+      volumes:
+        - name: config
+          configMap:
+            name: weather-grafana
+        - name: storage
+          persistentVolumeClaim:
+            claimName: weather-grafana
+---
+# Source: go-weather-stack/charts/prometheus/charts/kube-state-metrics/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-kube-state-metrics
+  namespace: sandbox
+  labels:    
+    helm.sh/chart: kube-state-metrics-4.4.3
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/part-of: kube-state-metrics
+    app.kubernetes.io/name: kube-state-metrics
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "2.3.0"
+spec:
+  selector:
+    matchLabels:      
+      app.kubernetes.io/name: kube-state-metrics
+      app.kubernetes.io/instance: weather
+  replicas: 1
+  template:
+    metadata:
+      labels:        
+        helm.sh/chart: kube-state-metrics-4.4.3
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: metrics
+        app.kubernetes.io/part-of: kube-state-metrics
+        app.kubernetes.io/name: kube-state-metrics
+        app.kubernetes.io/instance: weather
+        app.kubernetes.io/version: "2.3.0"
+    spec:
+      hostNetwork: false
+      serviceAccountName: weather-kube-state-metrics
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsUser: 65534
+      containers:
+      - name: kube-state-metrics
+        args:
+        - --port=8080
+        - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+        - --telemetry-port=8081
+        imagePullPolicy: IfNotPresent
+        image: "k8s.gcr.io/kube-state-metrics/kube-state-metrics:v2.3.0"
+        ports:
+        - containerPort: 8080
+          name: "http"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+---
+# Source: go-weather-stack/charts/prometheus/templates/alertmanager/deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: "alertmanager"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-alertmanager
+  namespace: sandbox
+spec:
+  selector:
+    matchLabels:
+      component: "alertmanager"
+      app: prometheus
+      release: weather
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: "alertmanager"
+        app: prometheus
+        release: weather
+        chart: prometheus-15.5.3
+        heritage: Helm
+    spec:
+      serviceAccountName: weather-prometheus-alertmanager
+      containers:
+        - name: prometheus-alertmanager
+          image: "quay.io/prometheus/alertmanager:v0.23.0"
+          imagePullPolicy: "IfNotPresent"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+          args:
+            - --config.file=/etc/config/alertmanager.yml
+            - --storage.path=/data
+            - --cluster.listen-address=
+            - --web.external-url=http://localhost:9093
+
+          ports:
+            - containerPort: 9093
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9093
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+            - name: storage-volume
+              mountPath: "/data"
+              subPath: ""
+        - name: prometheus-alertmanager-configmap-reload
+          image: "jimmidyson/configmap-reload:v0.5.0"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --volume-dir=/etc/config
+            - --webhook-url=http://127.0.0.1:9093/-/reload
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+              readOnly: true
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      volumes:
+        - name: config-volume
+          configMap:
+            name: weather-prometheus-alertmanager
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: weather-prometheus-alertmanager
+---
+# Source: go-weather-stack/charts/prometheus/templates/pushgateway/deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: "pushgateway"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-pushgateway
+  namespace: sandbox
+spec:
+  selector:
+    matchLabels:
+      component: "pushgateway"
+      app: prometheus
+      release: weather
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: "pushgateway"
+        app: prometheus
+        release: weather
+        chart: prometheus-15.5.3
+        heritage: Helm
+    spec:
+      serviceAccountName: weather-prometheus-pushgateway
+      containers:
+        - name: prometheus-pushgateway
+          image: "prom/pushgateway:v1.4.2"
+          imagePullPolicy: "IfNotPresent"
+          args:
+          ports:
+            - containerPort: 9091
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9091
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9091
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          resources:
+            {}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+---
+# Source: go-weather-stack/charts/prometheus/templates/server/deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: "server"
+    app: prometheus
+    release: weather
+    chart: prometheus-15.5.3
+    heritage: Helm
+  name: weather-prometheus-server
+  namespace: sandbox
+spec:
+  selector:
+    matchLabels:
+      component: "server"
+      app: prometheus
+      release: weather
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: "server"
+        app: prometheus
+        release: weather
+        chart: prometheus-15.5.3
+        heritage: Helm
+    spec:
+      enableServiceLinks: true
+      serviceAccountName: weather-prometheus-server
+      containers:
+        - name: prometheus-server-configmap-reload
+          image: "jimmidyson/configmap-reload:v0.5.0"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --volume-dir=/etc/config
+            - --webhook-url=http://127.0.0.1:9090/-/reload
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+              readOnly: true
+
+        - name: prometheus-server
+          image: "prom/prometheus:latest"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - --storage.tsdb.retention.time=15d
+            - --config.file=/etc/config/prometheus.yml
+            - --storage.tsdb.path=/data
+            - --web.console.libraries=/etc/prometheus/console_libraries
+            - --web.console.templates=/etc/prometheus/consoles
+            - --web.enable-lifecycle
+            - --log.level=debug
+          ports:
+            - containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 4
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+          resources:
+            {}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+            - name: storage-volume
+              mountPath: /data
+              subPath: ""
+            - name: server-prometheus-config
+              mountPath: /prometheus/prometheus.yml
+              subPath: prometheus.yml
+              readOnly: 
+      hostNetwork: false
+      dnsPolicy: ClusterFirst
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      terminationGracePeriodSeconds: 300
+      volumes:
+        - name: config-volume
+          configMap:
+            name: weather-prometheus-server
+        - name: server-prometheus-config
+          configMap:
+            name: prometheus-server-conf
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: weather-prometheus-server
+---
+# Source: go-weather-stack/templates/grafana/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        ports:
+        - containerPort: 3000
+---
+# Source: go-weather-stack/templates/prometheus/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-server
+  template:
+    metadata:
+      labels:
+        app: prometheus-server
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus
+        args:
+          - "--log.level=debug"
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: config-volume
+          mountPath: /prometheus/prometheus.yml
+          subPath: prometheus.yml
+      volumes:
+      - name: config-volume
+        configMap:
+          name: prometheus-config
+---
+# Source: go-weather-stack/templates/weather-api/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weather-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: weather-api
+  template:
+    metadata:
+      labels:
+        app: weather-api
+    spec:
+      containers:
+      - name: weather-api
+        image: goweather:v1
+        ports:
+        - containerPort: 8090
+        env:
+          - name: REDIS_PASWRD
+            valueFrom:
+              secretKeyRef:
+                key: "redis-password"
+                name: my-redis
+---
+# Source: go-weather-stack/charts/redis/templates/master/application.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: weather-redis-master
+  namespace: "sandbox"
+  labels:
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/version: 7.2.4
+    helm.sh/chart: redis-19.1.5
+    app.kubernetes.io/component: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: weather
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: master
+  serviceName: weather-redis-headless
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: weather
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/version: 7.2.4
+        helm.sh/chart: redis-19.1.5
+        app.kubernetes.io/component: master
+      annotations:
+        checksum/configmap: 86bcc953bb473748a3d3dc60b7c11f34e60c93519234d4c37f42e22ada559d47
+        checksum/health: aff24913d801436ea469d8d374b2ddb3ec4c43ee7ab24663d5f8ff1a1b6991a9
+        checksum/scripts: 560c33ff34d845009b51830c332aa05fa211444d1877d3526d3599be7543aaa5
+        checksum/secret: ae05a77901a9bd66d4dc7379e23546e8f0f945ab647b5b84581d0ac27d9315f8
+    spec:
+      
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
+        supplementalGroups: []
+        sysctls: []
+      serviceAccountName: weather-redis-master
+      automountServiceAccountToken: false
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: weather
+                    app.kubernetes.io/name: redis
+                    app.kubernetes.io/component: master
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      enableServiceLinks: true
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: redis
+          image: docker.io/bitnami/redis:7.2.4-debian-12-r13
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - /bin/bash
+          args:
+            - -c
+            - /opt/bitnami/scripts/start-scripts/start-master.sh
+          env:
+            - name: BITNAMI_DEBUG
+              value: "false"
+            - name: REDIS_REPLICATION_MODE
+              value: master
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "no"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: weather-redis
+                  key: redis-password
+            - name: REDIS_TLS_ENABLED
+              value: "no"
+            - name: REDIS_PORT
+              value: "6379"
+          ports:
+            - name: redis
+              containerPort: 6379
+          livenessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            # One second longer than command timeout should prevent generation of zombie processes.
+            timeoutSeconds: 6
+            successThreshold: 1
+            failureThreshold: 5
+            exec:
+              command:
+                - sh
+                - -c
+                - /health/ping_liveness_local.sh 5
+          readinessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 5
+            exec:
+              command:
+                - sh
+                - -c
+                - /health/ping_readiness_local.sh 1
+          resources:
+            limits:
+              cpu: 150m
+              ephemeral-storage: 1024Mi
+              memory: 192Mi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 50Mi
+              memory: 128Mi
+          volumeMounts:
+            - name: start-scripts
+              mountPath: /opt/bitnami/scripts/start-scripts
+            - name: health
+              mountPath: /health
+            - name: redis-data
+              mountPath: /data
+            - name: config
+              mountPath: /opt/bitnami/redis/mounted-etc
+            - name: empty-dir
+              mountPath: /opt/bitnami/redis/etc/
+              subPath: app-conf-dir
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+      volumes:
+        - name: start-scripts
+          configMap:
+            name: weather-redis-scripts
+            defaultMode: 0755
+        - name: health
+          configMap:
+            name: weather-redis-health
+            defaultMode: 0755
+        - name: config
+          configMap:
+            name: weather-redis-configuration
+        - name: empty-dir
+          emptyDir: {}
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: redis-data
+        labels:
+          app.kubernetes.io/instance: weather
+          app.kubernetes.io/name: redis
+          app.kubernetes.io/component: master
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "8Gi"
+---
+# Source: go-weather-stack/charts/grafana/templates/tests/test.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: weather-grafana-test
+  labels:
+    helm.sh/chart: grafana-6.23.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: weather
+    app.kubernetes.io/version: "8.4.2"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    "helm.sh/hook": test-success
+  namespace: sandbox
+spec:
+  serviceAccountName: weather-grafana-test
+  containers:
+    - name: weather-test
+      image: "bats/bats:v1.4.1"
+      imagePullPolicy: "IfNotPresent"
+      command: ["/opt/bats/bin/bats", "-t", "/tests/run.sh"]
+      volumeMounts:
+        - mountPath: /tests
+          name: tests
+          readOnly: true
+  volumes:
+  - name: tests
+    configMap:
+      name: weather-grafana-test
+  restartPolicy: Never

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/spf13/viper"
 	"log"
 	"time"
@@ -9,12 +10,22 @@ import (
 var AppConfig Config
 
 type Config struct {
-	Lang         string
-	Unit         string
-	Url          string
-	Apikey       string
-	Loglevel     string
-	PollInterval time.Duration
+	Lang         string        `yaml:"language"`
+	Unit         string        `yaml:"units"`
+	Url          string        `yaml:"url"`
+	Apikey       string        `yaml:"apikey"`
+	Loglevel     string        `yaml:"loglevel"`
+	PollInterval time.Duration `yaml:"poll_interval"`
+	Name         string        `yaml:"name"`
+	Secret       string        `yaml:"secret"`
+	Locations    []string      `yaml:"locations"`
+	Redis        Redis         `yaml:"redis"`
+}
+
+type Redis struct {
+	Addr     string `yaml:"addr"`
+	Password string `yaml:"password"`
+	DB       string `yaml:"db"`
 }
 
 func init() {
@@ -30,8 +41,27 @@ func init() {
 	viper.SetDefault("unit", "imperial")
 	viper.SetDefault("pollInterval", "20")
 
+	viper.AutomaticEnv()
+	//redisPaswrd := viper.GetString("REDIS_PASWRD")
+
 	if err := viper.Unmarshal(&AppConfig); err != nil {
 		log.Fatalf("Unable to decode into struct: %v", err)
 	}
 
+}
+
+func (c *Config) Parse() error {
+	viper.AddConfigPath(".")
+	viper.SetConfigName("config")
+
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		panic(fmt.Errorf("fatal error config file: %w", err))
+	}
+
+	if err := viper.Unmarshal(c); err != nil {
+		return err
+	}
+
+	return nil
 }

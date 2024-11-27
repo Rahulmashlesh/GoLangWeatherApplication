@@ -33,6 +33,7 @@ vendor/
 docs/
 
 # IDE files
+*.idea/*
 .idea/
 .vscode/
 *.xml

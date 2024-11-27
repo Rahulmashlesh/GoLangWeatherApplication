@@ -1,4 +1,4 @@
-apiKey: "c4df6fe3e0d87fb4e9d14412929130a5"
+apiKey: "c4"
 currentWeatherByZipUrl: "https://api.openweathermap.org/data/2.5/weather?zip=%s&appid=%s"
 
 # imperial, metric
@@ -11,4 +11,12 @@ lang: "EN"
 loglevel: "DEBUG"
 
 # time in sec
-pollInterval: 20
+pollInterval: 10
+
+locations:
+  - "95134"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: ""

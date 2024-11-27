@@ -5,31 +5,8 @@ import (
 	app2 "GoWeatherAPI/app"
 	_ "GoWeatherAPI/config"
 	_ "github.com/spf13/viper"
-	"strings"
 )
 
-// Node represents a node in the topology.
-type Node struct {
-	Name string
-}
-
-// Topology represents the overall structure of the nodes.
-type Topology struct {
-	Nodes []Node
-}
-
-// groupNodesBySuffix groups nodes within the Topology based on their suffix.
-func (t *Topology) groupNodesBySuffix() map[string][]Node {
-	groups := make(map[string][]Node)
-	for _, node := range t.Nodes {
-		parts := strings.Split(node.Name, "-")
-		if len(parts) > 1 {
-			suffix := parts[len(parts)-1]
-			groups[suffix] = append(groups[suffix], node)
-		}
-	}
-	return groups
-}
 func main() {
 
 	app := app2.App{}

@@ -17,3 +17,9 @@ spec:
         image: goweather:v1
         ports:
         - containerPort: 8090
+        env:
+          - name: REDIS_PASWRD
+            valueFrom:
+              secretKeyRef:
+                key: "redis-password"
+                name: weather-redis

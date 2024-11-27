@@ -1,5 +1,5 @@
 # Use the official Golang image as the base image
-FROM golang:1.21-alpine
+FROM golang:1.22-alpine
 
 WORKDIR /GoWeatherAPI
 
@@ -17,6 +17,4 @@ RUN go build .
 
 EXPOSE 8090
 
-CMD ls
-CMD ["./GoWeatherAPI serve"]
-
+CMD ["./GoWeatherAPI"]
