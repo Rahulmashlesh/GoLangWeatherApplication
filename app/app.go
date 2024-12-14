@@ -9,6 +9,7 @@ import (
 	"GoWeatherAPI/internal/my_logger"
 	"GoWeatherAPI/internal/poller"
 	"GoWeatherAPI/internal/pubsub"
+	"GoWeatherAPI/internal/queue"
 	"GoWeatherAPI/internal/service"
 	"context"
 	"log/slog"
@@ -41,7 +42,7 @@ var zipcodes = []string{"95134"}
 
 func (a *App) Run() int {
 
-	unit := config.AppConfig.Unit
+//	unit := config.AppConfig.Unit
 	ctx, cancel := context.WithCancel(context.Background())
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
@@ -57,22 +58,28 @@ func (a *App) Run() int {
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
-
+	
 	_, err := redisClient.Ping(ctx).Result()
 	if err != nil {
 		logger.Error("Failed to connect to Redis", err)
 		os.Exit(1)
 	} else {
 		logger.Info("Connected to Redis successfully")
-
 	}
-	redisStore := models.NewRedisStore(redisClient, logger)
+	redisStore := models.NewRedisStore(redisClient, logger, redisPubSub)
 	locationService := service.NewLocationService(weatherMapClient, redisStore, logger, metric, redisPubSub)
 	locationService.Start(ctx)
 	expireTimeDuration := config.AppConfig.PollInterval*time.Second
 	pLocker := poller.NewRedisLock(redisClient, expireTimeDuration , logger, "pollerLock")
 	qlocker := poller.NewRedisLock(redisClient, expireTimeDuration , logger, "queueLock")
-	p := service.NewPoller(expireTimeDuration, logger, redisPubSub, qlocker, pLocker)
+	if qlocker == nil {
+		logger.Error("Qlocker creation error, qlocker cant be nil")
+	}
+	if pLocker == nil {
+		logger.Error("Plocker creation error, qlocker cant be nil")
+	}
+	redisQueue := queue.NewRedisQueue(redisClient , logger ,  "weather_list")
+	p := service.NewPoller(expireTimeDuration, logger, redisPubSub, redisQueue, qlocker, pLocker)
 	p.Start(ctx)
 
 	done := a.handleExit(logger)
@@ -81,8 +88,8 @@ func (a *App) Run() int {
 		<-done
 		logger.Info("executing cancel()")
 	}()
-
 	for _, zipcode := range a.config.Locations {
+		logger.Info("Looping on zipcode:", "zipcode", zipcode)
 		w := models.NewLocation(zipcode)
 
 		if err := redisStore.Create(ctx, w); err != nil {
@@ -96,14 +103,10 @@ func (a *App) Run() int {
 	e := echo.New()
 	e.GET("/metrics", echo.WrapHandler(promhttp.HandlerFor(registry, promhttp.HandlerOpts{Registry: registry})))
 
-	go func() {
-		err := e.Start(":8080")
-		if err != nil {
-			logger.Error("http server hit error", "error", err)
-		}
-	}()
+	if err := e.Start(":8080"); err != nil {
+		logger.Error("http server hit error", "error", err)
+	}
 
-	p.StartPollingWeatherAPI(ctx, logger)
 	logger.Info("ending app")
 
 	return 0

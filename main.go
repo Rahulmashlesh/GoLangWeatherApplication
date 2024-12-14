@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	app := app2.App{}
+	app := app2.New()
 	app.Run()
 }
 

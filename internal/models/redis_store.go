@@ -2,11 +2,9 @@ package models
 
 import (
 	"GoWeatherAPI/internal/pubsub"
-	"GoWeatherAPI/internal/weather"
 	"context"
 	"encoding/json"
 	"log/slog"
-
 	"github.com/go-redis/redis/v8"
 )
 
@@ -44,17 +42,21 @@ func (rs *RedisStore) Get(ctx context.Context, zipcode string) (*Location, error
 
 func (rs *RedisStore) Create(ctx context.Context, location *Location) error {
 	// Create a hash with location and temperature
+	rs.logger.Debug("RedisStore:", "1 Create:", location.Zipcode)
 	countAdded, err := rs.addToSet(ctx, location.Zipcode)
 	if err != nil {
 		return err
 	}
-
+		rs.logger.Debug("RedisStore:", "2 Create:", location.Zipcode)
 	if countAdded > 0 {
 		data, err := json.Marshal(location)
 		if err != nil {
+			rs.logger.Error("Redis Store", "Error json marshal", err)
 			return err
 		}
+		rs.logger.Debug("RedisStore:", "3 Create:", location.Zipcode)
 		if _, err = rs.rdb.Set(ctx, location.Zipcode, data, 0).Result(); err != nil {
+			rs.logger.Error("Redis Store", "Error rdn.set location", err)
 			return err
 		}
 
@@ -62,11 +64,12 @@ func (rs *RedisStore) Create(ctx context.Context, location *Location) error {
 			return err
 		}
 	}
-
+// 
 	return nil
 }
 
 func (rs *RedisStore) Update(ctx context.Context, location *Location) error {
+	rs.logger.Info("RedisStore:", "Update location:" , location.Temperature)
 	return rs.Create(ctx, location)
 }
 
@@ -108,57 +111,54 @@ func (rs *RedisStore) addToSet(ctx context.Context, zipcode string) (int64, erro
 	return countAdded, nil
 }
 
-func (rs *RedisStore) Notify(w *weather.CurrentWeather) {
+func (rs *RedisStore) Notify(w *CurrentWeather) {
 	err := rs.Create(context.Background(), &Location{Zipcode: w.Zipcode, Name: w.Name, Temperature: w.Main.Temp})
 	if err != nil {
-		rs.logger.Error("Cant insert to Redis DB", err)
+		rs.logger.Error("Cant insert to Redis DB","error", err)
 	}
 }
 
-func (rs *RedisStore) Call(ctx context.Context, zip string, weatherClient weather.CurrentWeather) {
-	// Retrieve location data from Redis
-	locationData, err := rs.Get(ctx, zip)
-	if err != nil {
-		if err == redis.Nil {
-			rs.logger.Error("No data found in Redis for zipcode", "zipcode", zip)
-		} else {
-			rs.logger.Error("Error retrieving location data from Redis", "error", err)
-		}
-		return
-	}
+// func (rs *RedisStore) Call(ctx context.Context, zip string, weatherClient CurrentWeather) {
+// 	// Retrieve location data from Redis
+// 	locationData, err := rs.Get(ctx, zip)
+// 	if err != nil {
+// 		if err == redis.Nil {
+// 			rs.logger.Error("No data found in Redis for zipcode", "zipcode", zip)
+// 		} else {
+// 			rs.logger.Error("Error retrieving location data from Redis", "error", err)
+// 		}
+// 		return
+// 	}
 
-	// Translate location data to CurrentWeather
-	currentWeather := &weather.CurrentWeather{
-		Zipcode: zip,
-		Name:    locationData.Name,
-		Main: weather.Main{
-			Temp: locationData.Temperature,
-		},
-		Client:  weatherClient.Client,
-		Logger:  rs.logger,
-		Metrics: weatherClient.Metrics,
-	}
+// 	// Translate location data to CurrentWeather
+// 	currentWeather := &CurrentWeather{
+// 		Zipcode: zip,
+// 		Name:    locationData.Name,
+// 		Main: Main{
+// 			Temp: locationData.Temperature,
+// 		},
+// 	}
 
-	// Fetch fresh weather data from the weather API
-	hasChanged, err := currentWeather.GetWeather(ctx)
-	if err != nil {
-		rs.logger.Error("Error fetching weather data from API", "error", err)
-		return
-	}
+// 	// Fetch fresh weather data from the weather API
+// 	hasChanged, err :=   //currentWeather.GetWeather(ctx)
+// 	if err != nil {
+// 		rs.logger.Error("Error fetching weather data from API", "error", err)
+// 		return
+// 	}
 
-	// Update Redis if temperature or other data has changed
-	if hasChanged {
-		rs.logger.Info("Weather data has changed, updating Redis", "zipcode", zip)
-		err := rs.Update(ctx, &Location{
-			Zipcode:     zip,
-			Name:        currentWeather.Name,
-			Temperature: currentWeather.Main.Temp,
-		})
-		if err != nil {
-			rs.logger.Error("Error updating Redis with new weather data", "error", err)
-		}
-	} else {
-		rs.logger.Debug("No changes in weather data for zipcode", "zipcode", zip)
-	}
+// 	// Update Redis if temperature or other data has changed
+// 	if hasChanged {
+// 		rs.logger.Info("Weather data has changed, updating Redis", "zipcode", zip)
+// 		err := rs.Update(ctx, &Location{
+// 			Zipcode:     zip,
+// 			Name:        currentWeather.Name,
+// 			Temperature: currentWeather.Main.Temp,
+// 		})
+// 		if err != nil {
+// 			rs.logger.Error("Error updating Redis with new weather data", "error", err)
+// 		}
+// 	} else {
+// 		rs.logger.Debug("No changes in weather data for zipcode", "zipcode", zip)
+// 	}
 
-}
+// }

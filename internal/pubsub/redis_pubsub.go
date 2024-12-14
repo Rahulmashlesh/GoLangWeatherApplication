@@ -44,7 +44,7 @@ func (ps *RedisPubSub) Subscribe(ctx context.Context, events ...string) chan Eve
 	sub := ps.client.Subscribe(ctx, events...)
 	dataChan := sub.Channel()
 	go func() {
-		ps.logger.Info("receiving from Subscription")
+		ps.logger.Info("RedisPubSub: receiving from Subscription")
 		for {
 			select {
 			case data := <-dataChan:

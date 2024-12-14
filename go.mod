@@ -7,6 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/a-h/templ v0.2.707
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v5 v5.0.0-20230722203903-ec5b858dab61
 	github.com/pocketbase/pocketbase v0.22.3
 	github.com/prometheus/client_golang v1.18.0
@@ -56,7 +57,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/google/wire v0.6.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect

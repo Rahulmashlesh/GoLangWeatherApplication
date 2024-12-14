@@ -37,7 +37,7 @@ func (l *RedisLock) Lock(ctx context.Context) bool {
 
 	lock, err := l.client.Get(ctx, l.lockerKey).Result()
 	if errors.Is(err, redis.Nil) {
-		success, err := l.client.SetNX(ctx, l.lockerKey, l.id, l.expiry).Result()
+		success, err := l.client.SetNX(ctx, l.lockerKey, l.id.String(), l.expiry).Result()
 		if err != nil {
 			l.logger.Error("Error while trying to acquire lock", "error", err)
 			return false
@@ -52,6 +52,7 @@ func (l *RedisLock) Lock(ctx context.Context) bool {
 		l.logger.Error("Error while trying to acquire lock", "error", err)
 		return false
 	}
+	l.logger.Debug("Keys", "lock:", lock, "UUID:", l.id.String())
 	if lock == l.id.String() {
 		_, err = l.client.Expire(ctx, l.lockerKey, l.expiry).Result()
 		if err != nil {

@@ -10,19 +10,17 @@ import (
 
 type RedisQueue struct {
 	client     *redis.Client
-	list       string
-	set        string
+	list       string   
 	identifier string
 	logger     *slog.Logger
 }
 
-func NewRedisQueue(client *redis.Client, logger *slog.Logger, set string, list string) *RedisQueue {
+func NewRedisQueue(client *redis.Client, logger *slog.Logger, list string) *RedisQueue {
 	id := uuid.New()
 
 	return &RedisQueue{
 		client:     client,
 		list:       list,
-		set:        set,
 		identifier: id.String(),
 		logger:     logger,
 	}

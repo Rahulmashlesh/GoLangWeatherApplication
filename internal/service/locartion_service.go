@@ -45,9 +45,15 @@ func (ls *LocationService) Start(ctx context.Context) {
 					ls.logger.Error("Error getting weather", "error", err)
 				}
 				if changed {
+					ls.logger.Debug("Change is true", "location:", location.Zipcode)
 					if err := ls.model.Update(ctx, location); err != nil {
 						ls.logger.Error("Error updating location", "error", err)
 					}
+					
+					
+					
+					
+					
 				}
 			}
 		}
@@ -56,7 +62,7 @@ func (ls *LocationService) Start(ctx context.Context) {
 }
 
 func (ls *LocationService) getWeather(ctx context.Context, location *models.Location) (bool, error) {
-	rsp, err := ls.client.Get(location.Zipcode)
+	rsp, err := ls.client.Get(location.Zipcode, "imperial")
 	changed := false
 	if err != nil {
 		ls.logger.Error("Error during HTTP GET req:", err)
