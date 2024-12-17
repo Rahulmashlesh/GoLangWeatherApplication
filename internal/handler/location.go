@@ -23,7 +23,7 @@ func (l *Location) List(c echo.Context) error {
 		return err
 	}
 
-	component := template.Hello("Welcome Page", "Adit")
+	component := template.Hello("Welcome Page", "rahul")
 	h := templ.Handler(component)
 	return h.Component.Render(ctx, c.Response().Writer)
 }

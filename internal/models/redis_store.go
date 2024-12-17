@@ -43,12 +43,42 @@ func (rs *RedisStore) Get(ctx context.Context, zipcode string) (*Location, error
 func (rs *RedisStore) Create(ctx context.Context, location *Location) error {
 	// Create a hash with location and temperature
 	rs.logger.Debug("RedisStore:", "1 Create:", location.Zipcode)
+	
+	//if zipcode was already in set, 
+	//	counterAdded = 0 
+	//		else 
+	//  counterAdded = 1
 	countAdded, err := rs.addToSet(ctx, location.Zipcode)
 	if err != nil {
 		return err
 	}
-		rs.logger.Debug("RedisStore:", "2 Create:", location.Zipcode)
+	rs.logger.Debug("RedisStore:", "2 Create:", location.Zipcode, "countAdded:", countAdded)
+		
 	if countAdded > 0 {
+		if err := rs.publisher.Publish(ctx, "create", location.Zipcode); err != nil {
+			return err
+		}
+			
+		rs.logger.Debug("RedisStore: inside if countAdded", "X2.5 Create:", location.Zipcode, "countAdded:", countAdded)
+			
+		data, err := json.Marshal(location)
+		if err != nil {
+			rs.logger.Error("Redis Store", "Error json marshal", err)
+			return err
+		}
+		rs.logger.Debug("RedisStore:", "X3 Create:", location.Zipcode)
+		if _, err = rs.rdb.Set(ctx, location.Zipcode, data, 0).Result(); err != nil {
+			rs.logger.Error("Redis Store", "Error rdn.set location", err)
+			return err
+		}
+		rs.logger.Debug("RedisStore:", "X4 Create: trying to publish", location.Zipcode)
+		if err := rs.publisher.Publish(ctx, "update", location.Zipcode); err != nil {
+			return err
+		
+		}	
+	} else {
+		rs.logger.Debug("RedisStore: inside if countAdded", "2.5 Create:", location.Zipcode, "countAdded:", countAdded)
+		
 		data, err := json.Marshal(location)
 		if err != nil {
 			rs.logger.Error("Redis Store", "Error json marshal", err)
@@ -59,8 +89,8 @@ func (rs *RedisStore) Create(ctx context.Context, location *Location) error {
 			rs.logger.Error("Redis Store", "Error rdn.set location", err)
 			return err
 		}
-
-		if err := rs.publisher.Publish(ctx, "create", location.Zipcode); err != nil {
+		rs.logger.Debug("RedisStore:", "4 Create: trying to publish", location.Zipcode)
+		if err := rs.publisher.Publish(ctx, "update", location.Zipcode); err != nil {
 			return err
 		}
 	}
@@ -69,7 +99,7 @@ func (rs *RedisStore) Create(ctx context.Context, location *Location) error {
 }
 
 func (rs *RedisStore) Update(ctx context.Context, location *Location) error {
-	rs.logger.Info("RedisStore:", "Update location:" , location.Temperature)
+	rs.logger.Info("RedisStore:", "Update location:" , location.Zipcode)
 	return rs.Create(ctx, location)
 }
 
@@ -84,6 +114,7 @@ func (rs *RedisStore) List(ctx context.Context) ([]Location, error) {
 		if err != nil {
 			return nil, err
 		}
+		rs.logger.Debug("RedisStore: List Func", "Appending location:", zipCode)
 		locations = append(locations, *loc)
 	}
 	return locations, nil
@@ -104,10 +135,11 @@ func (rs *RedisStore) Delete(ctx context.Context, zipcode string) error {
 }
 
 func (rs *RedisStore) addToSet(ctx context.Context, zipcode string) (int64, error) {
-	countAdded, err := rs.rdb.SAdd(ctx, LOCATION_SET, zipcode).Result()
+	countAdded, err := rs.rdb.SAdd (ctx, LOCATION_SET, zipcode).Result()
 	if err != nil {
 		return 0, err
 	}
+	rs.logger.Debug("RedisStore:", "addToSet:", zipcode, "countAdded:", countAdded)
 	return countAdded, nil
 }
 
@@ -117,48 +149,3 @@ func (rs *RedisStore) Notify(w *CurrentWeather) {
 		rs.logger.Error("Cant insert to Redis DB","error", err)
 	}
 }
-
-// func (rs *RedisStore) Call(ctx context.Context, zip string, weatherClient CurrentWeather) {
-// 	// Retrieve location data from Redis
-// 	locationData, err := rs.Get(ctx, zip)
-// 	if err != nil {
-// 		if err == redis.Nil {
-// 			rs.logger.Error("No data found in Redis for zipcode", "zipcode", zip)
-// 		} else {
-// 			rs.logger.Error("Error retrieving location data from Redis", "error", err)
-// 		}
-// 		return
-// 	}
-
-// 	// Translate location data to CurrentWeather
-// 	currentWeather := &CurrentWeather{
-// 		Zipcode: zip,
-// 		Name:    locationData.Name,
-// 		Main: Main{
-// 			Temp: locationData.Temperature,
-// 		},
-// 	}
-
-// 	// Fetch fresh weather data from the weather API
-// 	hasChanged, err :=   //currentWeather.GetWeather(ctx)
-// 	if err != nil {
-// 		rs.logger.Error("Error fetching weather data from API", "error", err)
-// 		return
-// 	}
-
-// 	// Update Redis if temperature or other data has changed
-// 	if hasChanged {
-// 		rs.logger.Info("Weather data has changed, updating Redis", "zipcode", zip)
-// 		err := rs.Update(ctx, &Location{
-// 			Zipcode:     zip,
-// 			Name:        currentWeather.Name,
-// 			Temperature: currentWeather.Main.Temp,
-// 		})
-// 		if err != nil {
-// 			rs.logger.Error("Error updating Redis with new weather data", "error", err)
-// 		}
-// 	} else {
-// 		rs.logger.Debug("No changes in weather data for zipcode", "zipcode", zip)
-// 	}
-
-// }

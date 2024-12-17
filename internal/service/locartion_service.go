@@ -48,13 +48,11 @@ func (ls *LocationService) Start(ctx context.Context) {
 					ls.logger.Debug("Change is true", "location:", location.Zipcode)
 					if err := ls.model.Update(ctx, location); err != nil {
 						ls.logger.Error("Error updating location", "error", err)
-					}
-					
-					
-					
-					
-					
+					}	
+				} else {
+					ls.logger.Debug("Change is false", "location:", location.Zipcode)
 				}
+				
 			}
 		}
 	}()

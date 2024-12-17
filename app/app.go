@@ -79,6 +79,8 @@ func (a *App) Run() int {
 		logger.Error("Plocker creation error, qlocker cant be nil")
 	}
 	redisQueue := queue.NewRedisQueue(redisClient , logger ,  "weather_list")
+	n := service.NewNotifier(redisPubSub ,logger, redisStore)
+	n.Start(ctx)
 	p := service.NewPoller(expireTimeDuration, logger, redisPubSub, redisQueue, qlocker, pLocker)
 	p.Start(ctx)
 
@@ -106,7 +108,7 @@ func (a *App) Run() int {
 	if err := e.Start(":8080"); err != nil {
 		logger.Error("http server hit error", "error", err)
 	}
-
+	cleanupRedisDB(redisClient, logger)
 	logger.Info("ending app")
 
 	return 0
@@ -126,6 +128,33 @@ func (a *App) handleExit(logger *slog.Logger) <-chan struct{} {
 	return done
 }
 
-// TODO: UI :gorilla mux web socket for UI dynamic update.
+func cleanupRedisDB(redisClient *redis.Client, logger *slog.Logger) {
+	logger.Info("Cleaning up Redis database...")
+	logger.Info("Cleaning up Redis database...")
 
-// IMPLEMENT THE GET UPDATE FUNC, CHECK ONLY FOR THE TEMP CHANGE.
+		// Keys to clean up explicitly
+		keysToDelete := []string{"location_set", "weather_list", "pollerLock", "queueLock"}
+
+		// Fetch all elements in "weather_list" and append them to keysToDelete
+		weatherListKeys, err := redisClient.LRange(context.Background(), "weather_list", 0, -1).Result()
+		if err != nil {
+			logger.Error("Failed to fetch weather_list keys from Redis", "error", err)
+		} else {
+			logger.Info("Found elements in weather_list", "count", len(weatherListKeys))
+			keysToDelete = append(keysToDelete, weatherListKeys...)
+		}
+
+		// Delete all keys
+		for _, key := range keysToDelete {
+			err := redisClient.Del(context.Background(), key).Err()
+			if err != nil {
+				logger.Error("Failed to delete key from Redis", "key", key, "error", err)
+			} else {
+				logger.Info("Deleted key from Redis", "key", key)
+			}
+		}
+
+		logger.Info("Redis cleanup complete.")
+}
+
+// TODO: UI :gorilla mux web socket for UI dynamic update.
