@@ -1,0 +1,53 @@
+# Sends an ntfy.sh push when a PR is opened, marked ready for review, reopened, merged, or closed unmerged.
+# pull_request_target is safe here: this job never checks out or runs PR code, it only reads the event payload.
+# Needs repo secret NTFY_PR_TOPIC. Fires only once this file is on the default branch.
+name: pr-notify
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, reopened, closed]
+permissions: {}
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    # Draft PRs are skipped on 'opened'; they notify later via ready_for_review.
+    if: github.event.action != 'opened' || github.event.pull_request.draft == false
+    steps:
+      - name: Send ntfy notification
+        env:
+          NTFY_PR_TOPIC: ${{ secrets.NTFY_PR_TOPIC }}
+          ACTION: ${{ github.event.action }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          REPO: ${{ github.repository }}
+          NUM: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD: ${{ github.event.pull_request.head.ref }}
+          FILES: ${{ github.event.pull_request.changed_files }}
+          ADDS: ${{ github.event.pull_request.additions }}
+          DELS: ${{ github.event.pull_request.deletions }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+        run: |
+          set -eu
+          if [ -z "${NTFY_PR_TOPIC:-}" ]; then echo "NTFY_PR_TOPIC secret not set"; exit 0; fi
+          case "$ACTION" in
+            opened)           label="opened";           prio=4; tags="new,inbox_tray" ;;
+            ready_for_review) label="ready for review"; prio=4; tags="eyes" ;;
+            reopened)         label="reopened";         prio=3; tags="repeat" ;;
+            closed)
+              if [ "$MERGED" = "true" ]; then label="merged"; prio=3; tags="tada,white_check_mark"
+              else label="closed (not merged)"; prio=3; tags="x"; fi ;;
+            *) exit 0 ;;
+          esac
+          nl='
+          '
+          body="Repo: ${REPO}${nl}PR: #${NUM} ${PR_TITLE}${nl}Author: ${AUTHOR}${nl}Branch: ${BASE} <- ${HEAD}${nl}Files changed: ${FILES} (+${ADDS} / -${DELS})"
+          if [ "$label" = "merged" ]; then
+            body="${body}${nl}Merged by: ${MERGED_BY}${nl}Merged at: ${MERGED_AT}"
+          fi
+          title=$(printf '%s' "PR ${label}: ${REPO}#${NUM}" | tr -d '\r\n')
+          curl -fsS --max-time 20 \
+            -H "Title: ${title}" -H "Priority: ${prio}" -H "Tags: ${tags}" -H "Click: ${PR_URL}" \
+            -d "${body}" "https://ntfy.sh/${NTFY_PR_TOPIC}" >/dev/null
